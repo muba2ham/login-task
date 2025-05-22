@@ -1,0 +1,103 @@
+package com.example.logintask.ui.viewmodels
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.logintask.model.LoginRequest
+import com.example.logintask.repo.local.LocalService
+import com.example.logintask.repo.remote.RestService
+import com.example.logintask.utils.Constants
+import com.example.logintask.utils.states.LoginStates
+import com.example.logintask.utils.states.NavigationStates
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class MainActivityViewModel @Inject constructor(
+    private val restService: RestService?,
+    private val localService: LocalService
+): ViewModel() {
+
+    private val _navigationEvent = MutableSharedFlow<NavigationStates>()
+    val navigationEvent = _navigationEvent.asSharedFlow()
+
+    private val _email = MutableStateFlow<String>("")
+    val email: StateFlow<String> = _email
+
+    private val _password = MutableStateFlow<String>("")
+    val password: StateFlow<String> = _password
+
+    private val _loginState = MutableStateFlow<String>(LoginStates.Undetermined.state)
+    val loginState: StateFlow<String> = _loginState
+
+    private val _loginUIState = MutableStateFlow<Boolean>(true)
+    val loginUIState: StateFlow<Boolean> = _loginUIState
+
+    private val _logoutUIState = MutableStateFlow<Boolean>(true)
+    val logoutUIState: StateFlow<Boolean> = _logoutUIState
+
+    fun setEmail(value: String) {
+        _email.value = value
+    }
+
+    fun setPassword(value: String) {
+        _password.value = value
+    }
+
+    fun logUserIn() {
+
+        _loginUIState.value = false
+
+        if (!_email.value.isEmpty() && !_password.value.isEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+
+                val response = restService!!.login(LoginRequest(email.value, password.value))
+
+                if (response.isSuccessful) {
+                    println("TOKEN ${response.body()!!.token}")
+
+                    localService.setUserLoginState(true)
+                    localService.setUserLoginToken(response.body()!!.token)
+
+                    _loginState.emit(LoginStates.Success.state)
+                    _logoutUIState.emit(true)
+
+                    delay(Constants.COMPOSE_NAVIGATION_DELAY)
+                    _navigationEvent.emit(NavigationStates.NavigateToApp)
+
+                } else {
+                    _loginState.emit(LoginStates.Error.state)
+                    _loginUIState.emit(true)
+                }
+
+            }
+        } else {
+            _loginState.value = LoginStates.Error.state
+            _loginUIState.value = true
+        }
+    }
+
+    fun logUserOut() {
+        viewModelScope.launch {
+            _logoutUIState.emit(false)
+
+            localService.setUserLoginState(false)
+            localService.setUserLoginToken("")
+
+            _loginUIState.emit(true)
+
+            _loginState.emit(LoginStates.Undetermined.state)
+            _email.emit("")
+            _password.emit("")
+
+            delay(Constants.COMPOSE_NAVIGATION_DELAY)
+            _navigationEvent.emit(NavigationStates.NavigateToLogin)
+        }
+    }
+}
