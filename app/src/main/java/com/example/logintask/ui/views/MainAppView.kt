@@ -30,7 +30,7 @@ fun MainView(
         Text(text = UIStrings.main_app_view)
         Button(
             onClick = { viewModel.logUserOut() },
-            enabled = viewModel.logoutUIState.collectAsState().value
+            enabled = viewModel.loginStateModel.collectAsState().value.loginUIState
         )
         {
             Text(UIStrings.logout_button)

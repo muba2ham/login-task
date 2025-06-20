@@ -13,18 +13,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.navigation.NavController
+import androidx.compose.runtime.getValue
 import com.example.logintask.ui.viewmodels.MainActivityViewModel
 import com.example.logintask.utils.App
-import com.example.logintask.utils.Constants
 import com.example.logintask.utils.Login
 import com.example.logintask.utils.UIStrings
 import com.example.logintask.utils.states.NavigationStates
-import kotlinx.coroutines.delay
 
 @Composable
 fun LoginView(
     viewModel: MainActivityViewModel,
     navController: NavController) {
+
+    val state by viewModel.loginStateModel.collectAsState()
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -33,26 +34,26 @@ fun LoginView(
     ) {
 
         OutlinedTextField(
-            value = viewModel.email.collectAsState().value,
+            value = state.email,
             onValueChange = { viewModel.setEmail(it) },
             label = { Text(UIStrings.email) },
             placeholder = { Text(UIStrings.email_placeholder) },
             singleLine = true,
-            enabled = viewModel.loginUIState.collectAsState().value
+            enabled = state.loginUIState
         )
         OutlinedTextField(
-            value = viewModel.password.collectAsState().value,
+            value = state.password,
             onValueChange = { viewModel.setPassword(it) },
             label = { Text(UIStrings.password) },
             placeholder = { Text(UIStrings.password_placeholder) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
-            enabled = viewModel.loginUIState.collectAsState().value
+            enabled = state.loginUIState
         )
-        Text(text = viewModel.loginState.collectAsState().value)
+        Text(text = state.loginState)
         Button(
             onClick = { viewModel.logUserIn() },
-            enabled = viewModel.loginUIState.collectAsState().value
+            enabled = state.loginUIState
         )
         {
             Text(UIStrings.login_button)
